@@ -8,6 +8,7 @@ from pathlib import Path
 
 from model import ClassifierModel
 from loss import HierarchicalLoss
+from dataloader import Dataloaders
 ### IMPORT DATASET AND/OR DATALOADER HERE
 
 
@@ -60,11 +61,13 @@ def main():
         lambda_leaf=lambda_leaf
     )
 
-    # DATA LOADERS HERE
-    #train_loader = ???
-    #valid_loader = ???
-    #test_loader = ???
-
+    train_loader, valid_loader, test_loader = Dataloaders(
+        clean_csv_dir= 'bsd10k-splits', 
+        noisy_csv_path='noisy_data/bsd35k-train-14k.csv', 
+        clean_audio_dir='clean_data/audio', 
+        noisy_audio_dir='noisy_data/audio', 
+        batch_size=16
+    )
     # Dummy data loaders for testing purposes. --- IGNORE ---
     num_batches = 10
     train_loader = [(torch.randn(batch_size, 16000), torch.zeros(batch_size, 16000).bool(), torch.randint(0, num_parent_classes, (batch_size,)), torch.randint(0, num_child_classes, (batch_size,))) for _ in range(num_batches)]
