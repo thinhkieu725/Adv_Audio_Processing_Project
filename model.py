@@ -34,16 +34,25 @@ class ClassifierModel(nn.Module):
     
         self.BEATs_model = init_BEATs_model(BEATs_checkpoint_path)
         self.BEATs_output_dim = 768
+        
+        self.shared_block = nn.Sequential(
+            nn.LayerNorm(self.BEATs_output_dim),
+            nn.Linear(self.BEATs_output_dim, self.hidden_dim),
+            nn.GELU(),
+            nn.Dropout(self.dropout),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.GELU(),
+            nn.Dropout(self.dropout),
+        )
+
         self.parent_classifier = nn.Sequential(
-                nn.LayerNorm(self.BEATs_output_dim),
-                nn.Linear(self.BEATs_output_dim, self.hidden_dim),
+                nn.Linear(self.hidden_dim, self.hidden_dim),
                 nn.GELU(),
                 nn.Dropout(self.dropout),
                 nn.Linear(self.hidden_dim, self.num_parent_classes),
             )
         self.leaf_classifier = nn.Sequential(
-                nn.LayerNorm(self.BEATs_output_dim),
-                nn.Linear(self.BEATs_output_dim, self.hidden_dim),
+                nn.Linear(self.hidden_dim, self.hidden_dim),
                 nn.GELU(),
                 nn.Dropout(self.dropout),
                 nn.Linear(self.hidden_dim, self.num_leaf_classes),
@@ -85,8 +94,9 @@ class ClassifierModel(nn.Module):
                 padding_mask: torch.Tensor):
         features, padding_mask_token = self.BEATs_model.extract_features(x, padding_mask=padding_mask)
         pooled_features = self.masked_mean_pool(features, padding_mask_token)
-        parent_logits = self.parent_classifier(pooled_features)
-        leaf_logits = self.leaf_classifier(pooled_features)
+        shared_representation = self.shared_block(pooled_features)
+        parent_logits = self.parent_classifier(shared_representation)
+        leaf_logits = self.leaf_classifier(shared_representation)
 
         return parent_logits, leaf_logits
 
